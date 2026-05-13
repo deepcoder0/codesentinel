@@ -7,6 +7,7 @@ build/
 .ruff_cache/
 htmlcov/
 .env
+.venv/
 data/
 chroma_data/
 *.db

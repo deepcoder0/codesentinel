@@ -26,20 +26,35 @@ GitHub PR → Parse Diff → Fan-out to 4 Agents → A2A Enrichment → Conflict
 - **Integration:** MCP server for Claude Desktop, GitHub API
 - **Observability:** LangFuse tracing, structlog
 
+## Prerequisites
+
+- Python 3.11+ (`brew install python@3.11` on macOS)
+- [Ollama](https://ollama.com/) installed and running
+- Git
+
 ## Quick Start
 
 ```bash
-# Clone and install
+# Clone and set up
 git clone https://github.com/YOUR_USERNAME/codesentinel.git
 cd codesentinel
+
+# Create virtual environment with Python 3.11+
+python3.11 -m venv .venv
+source .venv/bin/activate
+
+# Install dependencies
 make dev
 
 # Pull the LLM model
 ollama pull qwen2.5-coder:7b
 
-# Run a review
-make serve
-# Then POST to http://localhost:8000/api/review with {"pr_url": "..."}
+# Verify everything works
+python -m codesentinel.hello_graph
+# Should print: ✅ LangGraph + Ollama working!
+
+# Run tests
+make test
 ```
 
 ## Project Status

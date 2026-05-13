@@ -2,11 +2,11 @@
 
 # Install in editable mode with dev dependencies
 dev:
-	pip install -e ".[dev]" --break-system-packages
+	pip install -e ".[dev]"
 
 # Install all optional deps
 dev-full:
-	pip install -e ".[dev,observability,mcp]" --break-system-packages
+	pip install -e ".[dev,observability,mcp]"
 
 # Run tests
 test:
