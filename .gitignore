@@ -1,0 +1,15 @@
+__pycache__/
+*.egg-info/
+dist/
+build/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+htmlcov/
+.env
+data/
+chroma_data/
+*.db
+.DS_Store
+*.pyc
+.coverage

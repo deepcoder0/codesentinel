@@ -1,0 +1,1 @@
+Review the current sprint status. Check which stories are complete by looking at the code that exists vs what's needed. Reference CLAUDE.md for the sprint board. Show: completed items, in-progress items, and what's next.

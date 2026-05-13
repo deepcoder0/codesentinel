@@ -1,0 +1,1 @@
+Run the test suite and report results. Execute `pytest tests/ -v --tb=short`. If tests fail, analyze the failure and suggest a fix. If no tests exist yet for a module, mention which modules need tests.
