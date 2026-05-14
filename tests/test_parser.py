@@ -110,6 +110,23 @@ class TestParsePatch:
         assert hunks[0].new_start == 1
         assert hunks[1].new_start == 20
 
+    def test_content_lines_starting_with_plus_or_minus_are_counted(self) -> None:
+        """Regression: removed `---` (markdown rule) or added `+++` lines must not be
+        mistaken for file-header noise and dropped."""
+        patch = (
+            "@@ -1,4 +1,4 @@\n"
+            " heading\n"
+            "----\n"
+            "+++added line that starts with plus\n"
+            " trailer\n"
+        )
+        h = parse_patch(patch)[0]
+        types = [c.type for c in h.changes]
+        # Expect: context, remove (content "---"), add (content "++added..."), context
+        assert types == ["context", "remove", "add", "context"]
+        assert h.changes[1].content == "---"
+        assert h.changes[2].content.startswith("++added")
+
     def test_skips_no_newline_marker(self) -> None:
         patch = (
             "@@ -1,2 +1,2 @@\n"

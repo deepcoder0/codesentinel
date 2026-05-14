@@ -111,9 +111,6 @@ def parse_patch(patch: str) -> list[Hunk]:
         if current is None:
             continue
 
-        if raw_line.startswith("+++") or raw_line.startswith("---"):
-            # File header lines that occasionally leak into a patch body — skip.
-            continue
         if raw_line.startswith("\\"):
             # `\ No newline at end of file` marker — not a real change.
             continue
