@@ -1,0 +1,40 @@
+diff --git a/src/auth.py b/src/auth.py
+index aaa..bbb 100644
+--- a/src/auth.py
++++ b/src/auth.py
+@@ -1,5 +1,6 @@
+ import os
++import hashlib
+
+
+ def hash_password(pw):
+-    return pw
++    return hashlib.sha256(pw.encode()).hexdigest()
+diff --git a/web/index.js b/web/index.js
+index ccc..ddd 100644
+--- a/web/index.js
++++ b/web/index.js
+@@ -10,6 +10,7 @@ function render() {
+   const el = document.getElementById("root");
+   el.innerHTML = userInput;
++  console.log("rendered");
+   return el;
+ }
+
+diff --git a/README.md b/docs/README.md
+similarity index 100%
+rename from README.md
+rename to docs/README.md
+diff --git a/logo.png b/logo.png
+new file mode 100644
+index 0000000..eeeffff
+Binary files /dev/null and b/logo.png differ
+diff --git a/src/legacy.py b/src/legacy.py
+deleted file mode 100644
+index fff0000..0000000
+--- a/src/legacy.py
++++ /dev/null
+@@ -1,3 +0,0 @@
+-def old_thing():
+-    return 1
+-
