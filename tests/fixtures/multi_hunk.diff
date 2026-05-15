@@ -1,0 +1,20 @@
+diff --git a/src/util.py b/src/util.py
+index 111..222 100644
+--- a/src/util.py
++++ b/src/util.py
+@@ -1,5 +1,6 @@
+ import os
+ import sys
++import json
+
+
+ def first():
+@@ -20,7 +20,8 @@ def second():
+     x = 1
+     y = 2
+-    return x + y
++    z = x + y
++    return z
+
+
+ def third():
