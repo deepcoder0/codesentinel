@@ -135,10 +135,32 @@ class TestParseReviewResponse:
         assert items == []
         assert err is not None and "json_decode_error" in err
 
-    def test_object_instead_of_array(self) -> None:
-        items, err = _parse_review_response('{"file": "a"}', agent="quality")
+    def test_object_with_no_recognized_keys_is_an_error(self) -> None:
+        items, err = _parse_review_response('{"unrelated": "data"}', agent="quality")
         assert items == []
         assert err == "expected_list_got_dict"
+
+    def test_single_finding_dict_wrapped_into_list(self) -> None:
+        """Regression: live test showed the LLM returns a single object when there's
+        only one finding. Wrap it instead of dropping the finding."""
+        raw = '{"file": "a.py", "line_start": 1, "severity": "critical", "category": "x", "message": "sqli"}'
+        items, err = _parse_review_response(raw, agent="quality")
+        assert err is None
+        assert len(items) == 1
+        assert items[0].file == "a.py"
+
+    def test_dict_with_findings_key_unwrapped(self) -> None:
+        """Some prompts elicit {"findings": [...]} — accept that shape too."""
+        raw = '{"findings": [{"file": "a.py", "line_start": 1, "severity": "info", "category": "x", "message": "y"}]}'
+        items, err = _parse_review_response(raw, agent="quality")
+        assert err is None
+        assert len(items) == 1
+
+    def test_empty_dict_treated_as_no_findings(self) -> None:
+        """Regression: ChatOllama(format='json') returns `{}` for the empty case."""
+        items, err = _parse_review_response("{}", agent="quality")
+        assert err is None
+        assert items == []
 
     def test_empty_string(self) -> None:
         items, err = _parse_review_response("", agent="quality")

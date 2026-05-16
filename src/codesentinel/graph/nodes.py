@@ -72,11 +72,12 @@ def parse_pr_node(state: ReviewState) -> dict:
 _QUALITY_SYSTEM_PROMPT = (
     "You are a senior code reviewer focused on code quality (naming, "
     "structure, dead code, complexity, error handling). Return ONLY a JSON "
-    "array of findings. No prose, no markdown fences. Schema per finding: "
-    '{"file": str, "line_start": int, "line_end": int|null, "severity": '
-    '"critical"|"warning"|"info", "category": str, "message": str, '
-    '"suggestion": str|null, "confidence": float in [0,1]}. If there are '
-    "no issues, return []."
+    "array of findings. ALWAYS an array, even for a single finding (use "
+    "[{...}], never just {...}). No prose, no markdown fences. Schema per "
+    'finding: {"file": str, "line_start": int, "line_end": int|null, '
+    '"severity": "critical"|"warning"|"info", "category": str, "message": '
+    'str, "suggestion": str|null, "confidence": float in [0,1]}. If there '
+    "are no issues, return []."
 )
 
 _LEADING_FENCE_RE = re.compile(r"^```(?:json)?\s*\n?", re.IGNORECASE)
@@ -126,6 +127,22 @@ def _parse_review_response(content: str, agent: str) -> tuple[list[ReviewItem], 
         raw = json.loads(cleaned)
     except json.JSONDecodeError as exc:
         return [], f"json_decode_error: {exc.msg}"
+
+    # Tolerate common LLM quirks: ChatOllama(format="json") sometimes returns
+    # an object instead of an array. Map the recognised shapes to a list:
+    #   {}                              → []  (LLM's stand-in for "no findings")
+    #   {"findings": [...]}             → [...]
+    #   {"file": ..., "message": ...}   → [{...}]  (a single finding)
+    # Anything else is a true error.
+    if isinstance(raw, dict):
+        if not raw:
+            raw = []
+        elif "findings" in raw and isinstance(raw["findings"], list):
+            raw = raw["findings"]
+        elif "file" in raw or "message" in raw:
+            raw = [raw]
+        else:
+            return [], f"expected_list_got_{type(raw).__name__}"
 
     if not isinstance(raw, list):
         return [], f"expected_list_got_{type(raw).__name__}"
