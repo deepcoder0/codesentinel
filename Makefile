@@ -36,9 +36,13 @@ serve:
 ingest:
 	python -m codesentinel.rag.ingest
 
-# Quick CLI review (usage: make review URL=https://github.com/...)
+# Quick CLI review (usage: make review URL=https://github.com/... OR make review DIFF=path/to.diff)
 review:
+ifdef DIFF
+	python -m codesentinel.cli --diff $(DIFF)
+else
 	python -m codesentinel.cli $(URL)
+endif
 
 # Clean build artifacts
 clean:
