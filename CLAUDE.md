@@ -12,7 +12,7 @@ A multi-agent AI code review system. Pipeline: **GitHub PR → parse diff → fa
 
 ## Current Repo State
 
-Sprint 1 is in progress. Only `models.py`, `config.py`, and `hello_graph.py` are implemented under `src/codesentinel/`. The `agents/`, `graph/`, `rag/`, `api/`, `mcp/`, and `output/` subpackages contain only empty `__init__.py` files — they are scaffolds for upcoming stories. Do not assume a file exists just because it appears in a planned layout — read or `find` first.
+Sprint 1 in progress. **Implemented:** `models.py`, `config.py`, `hello_graph.py`, `parser.py` (CS-002 — `parse_pr` + raw-diff fallback, ±3 context preserved, binary skip, rename detection, 37 tests). **Empty scaffolds:** `agents/`, `graph/`, `rag/`, `api/`, `mcp/`, `output/` subpackages — only `__init__.py` files. Do not assume a file exists just because it appears in a planned layout — read or `find` first.
 
 ## Dev Environment
 
@@ -67,3 +67,13 @@ Single test: `pytest tests/test_models.py::TestReviewItem::test_confidence_bound
 ## Subagents and Slash Commands
 
 `.claude/agents/` defines project-specific subagents (`code-reviewer`, `prompt-tuner`, `test-writer`) — use them for their stated purposes. `.claude/commands/` defines slash commands (`/review`, `/run-tests`, `/sprint-status`). `PROMPTS.md` is the changelog for agent prompt versions — update it when you change an agent's system prompt.
+
+## Story Workflow
+
+When working a CS-XXX story, follow this loop. It came out of CS-002, where unit tests passed but a live diff exposed a real parser bug.
+
+1. **Read the contract.** Open `codesentinelbreakdown.html`, find the story block, treat acceptance criteria as the contract for "done" and the deep-dive How/Gotchas as the intended approach.
+2. **Branch.** `git checkout -b feature/CS-XXX` off `main`. One story per branch.
+3. **Implement + unit tests.** Mock all LLM/network calls. Tests live alongside the new module (e.g. `tests/test_<module>.py`); fixtures in `tests/fixtures/`.
+4. **Live integration test.** Don't stop at green unit tests — run the new code against real data once (a real diff, real Ollama call, real PR, etc.) and cross-check the output against an external source of truth (e.g. `git diff --numstat`, the GitHub UI, a hand-counted expected value). Unit tests prove the code matches your mental model; live tests prove your mental model matches reality.
+5. **Push, open PR, merge.** Commit messages use the `CS-XXX: <title>` prefix. After merge, update the "Current Repo State" block in this file so future Claude sees the new shape of the codebase.
