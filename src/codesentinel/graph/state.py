@@ -8,12 +8,14 @@ once we fan out to parallel agents in CS-006+.
 
 from __future__ import annotations
 
-import operator
 from typing import Annotated, Any
 
 from typing_extensions import TypedDict
 
-from codesentinel.models import FileDiff, ReviewItem
+# Runtime imports (not TYPE_CHECKING): LangGraph's StateGraph(ReviewState) calls
+# typing.get_type_hints() on this TypedDict, which forces resolution of every
+# referenced name. Moving these under TYPE_CHECKING breaks graph construction.
+from codesentinel.models import FileDiff, ReviewItem  # noqa: TC001
 
 
 def _merge_dicts(left: dict[str, Any], right: dict[str, Any]) -> dict[str, Any]:

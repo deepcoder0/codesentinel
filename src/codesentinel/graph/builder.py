@@ -7,8 +7,9 @@ Future stories add more agent nodes via ``add_node`` and connect them with
 
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
+
 from langgraph.graph import END, START, StateGraph
-from langgraph.graph.state import CompiledStateGraph
 
 from codesentinel.graph.nodes import (
     format_output_node,
@@ -16,6 +17,9 @@ from codesentinel.graph.nodes import (
     quality_review_node,
 )
 from codesentinel.graph.state import ReviewState
+
+if TYPE_CHECKING:
+    from langgraph.graph.state import CompiledStateGraph
 
 
 def build_review_graph() -> CompiledStateGraph:

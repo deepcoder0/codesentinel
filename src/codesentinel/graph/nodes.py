@@ -18,7 +18,12 @@ from langchain_ollama import ChatOllama
 from pydantic import ValidationError
 
 from codesentinel.config import OLLAMA_HOST, OLLAMA_MODEL
-from codesentinel.graph.state import ReviewState
+
+# Runtime imports (not TYPE_CHECKING): LangGraph's add_node() runs
+# typing.get_type_hints() on each node function, which forces resolution of
+# every name in its signature. Moving these under TYPE_CHECKING breaks the
+# graph at build time.
+from codesentinel.graph.state import ReviewState  # noqa: TC001
 from codesentinel.models import FileDiff, ReviewItem
 from codesentinel.parser import parse_pr
 
