@@ -1,0 +1,22 @@
+diff --git a/src/handlers.py b/src/handlers.py
+index 1111111..2222222 100644
+--- a/src/handlers.py
++++ b/src/handlers.py
+@@ -1,3 +1,18 @@
+ from typing import Iterable
++
++
++def f(x, l):
++    r = []
++    for i in l:
++        if i > x:
++            r.append(i)
++    return r
++
++
++class HX:
++    def __init__(self, d):
++        self.d = d
++
++    def go(self, n):
++        return self.d * n

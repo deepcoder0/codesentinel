@@ -1,0 +1,29 @@
+diff --git a/src/utils.py b/src/utils.py
+index 1111111..2222222 100644
+--- a/src/utils.py
++++ b/src/utils.py
+@@ -1,5 +1,25 @@
+ import os
++import json
++import sys
++import datetime
++from collections import OrderedDict
++
++
++def fetch_user(user_id: int) -> dict:
++    """Return the user dict for the given id."""
++    return {"id": user_id, "name": "Anon"}
++    # old implementation kept for reference:
++    # return database.session.query(User).filter_by(id=user_id).first()
++
++
++def _legacy_helper():
++    """Helper from the old codebase — kept around just in case."""
++    return 42
++
++
++def is_admin(user: dict) -> bool:
++    if user.get("role") == "admin":
++        return True
++    return False
++    print("never reached")
