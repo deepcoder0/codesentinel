@@ -12,7 +12,7 @@ A multi-agent AI code review system. Pipeline: **GitHub PR → parse diff → fa
 
 ## Current Repo State
 
-Sprint 1 in progress. **Implemented:** `models.py`, `config.py`, `hello_graph.py`, `parser.py` (CS-002), `graph/state.py` + `graph/nodes.py` + `graph/builder.py` (CS-003 — 3-node review pipeline, ChatOllama-backed quality_review, markdown formatter), `cli.py` (entrypoint for `make review`). **Empty scaffolds:** `agents/`, `rag/`, `api/`, `mcp/`, `output/` subpackages — only `__init__.py` files. Do not assume a file exists just because it appears in a planned layout — read or `find` first.
+Sprint 1 in progress. **Implemented:** `models.py`, `config.py`, `hello_graph.py`, `parser.py` (CS-002), `graph/state.py` + `graph/nodes.py` + `graph/builder.py` (CS-003), `cli.py`, and `agents/base.py` + `agents/quality.py` (CS-004 — `BaseAgent` ABC with shared LLM-call / parse-retry / confidence-filter logic, `QualityAgent` with v1 few-shot prompt). The graph's `quality_review_node` is now a thin wrapper that delegates to `QualityAgent.review()`. **Empty scaffolds:** `rag/`, `api/`, `mcp/`, `output/` subpackages — only `__init__.py` files. Do not assume a file exists just because it appears in a planned layout — read or `find` first.
 
 ## Dev Environment
 
