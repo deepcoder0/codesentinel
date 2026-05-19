@@ -13,8 +13,7 @@ from unittest.mock import MagicMock, patch
 import pytest
 
 from codesentinel.agents.base import BaseAgent
-from codesentinel.models import Change, FileDiff, Hunk, ReviewItem, Severity
-
+from codesentinel.models import Change, FileDiff, Hunk
 
 # ---------------------------------------------------------------------------
 # Test agent — a minimal BaseAgent subclass used to exercise the base contract

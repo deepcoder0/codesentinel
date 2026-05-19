@@ -132,4 +132,4 @@ class QualityAgent(BaseAgent):
 
     name: ClassVar[str] = "quality"
     default_system_prompt: ClassVar[str] = QUALITY_SYSTEM_PROMPT
-    confidence_threshold: ClassVar[float] = 0.6
+    confidence_threshold: float = 0.6

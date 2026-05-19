@@ -4,28 +4,29 @@ Each node is ``def node(state: ReviewState) -> dict`` — reads from state,
 returns a partial dict for LangGraph to merge. Nodes never mutate state in
 place. LLM and network failures are caught and surfaced via the ``metadata``
 state field so the graph keeps running.
+
+The review nodes themselves are *thin wrappers* — the real work lives on the
+``BaseAgent`` subclasses in ``codesentinel.agents``. Future agents
+(Security/Performance/Architecture) will follow the same template.
 """
 
 from __future__ import annotations
 
-import json
-import re
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 import structlog
-from langchain_core.messages import HumanMessage, SystemMessage
-from langchain_ollama import ChatOllama
-from pydantic import ValidationError
 
-from codesentinel.config import OLLAMA_HOST, OLLAMA_MODEL
+from codesentinel.agents.quality import QualityAgent
 
-# Runtime imports (not TYPE_CHECKING): LangGraph's add_node() runs
+# Runtime import (not TYPE_CHECKING): LangGraph's add_node() runs
 # typing.get_type_hints() on each node function, which forces resolution of
-# every name in its signature. Moving these under TYPE_CHECKING breaks the
-# graph at build time.
+# every name in its signature. ReviewState appears in node signatures, so
+# moving it under TYPE_CHECKING breaks the graph at build time.
 from codesentinel.graph.state import ReviewState  # noqa: TC001
-from codesentinel.models import FileDiff, ReviewItem
 from codesentinel.parser import parse_pr
+
+if TYPE_CHECKING:
+    from codesentinel.models import ReviewItem
 
 log = structlog.get_logger()
 
@@ -66,151 +67,31 @@ def parse_pr_node(state: ReviewState) -> dict:
 
 
 # ---------------------------------------------------------------------------
-# quality_review_node
+# quality_review_node — delegates to QualityAgent
 # ---------------------------------------------------------------------------
-
-_QUALITY_SYSTEM_PROMPT = (
-    "You are a senior code reviewer focused on code quality (naming, "
-    "structure, dead code, complexity, error handling). Return ONLY a JSON "
-    "array of findings. ALWAYS an array, even for a single finding (use "
-    "[{...}], never just {...}). No prose, no markdown fences. Schema per "
-    'finding: {"file": str, "line_start": int, "line_end": int|null, '
-    '"severity": "critical"|"warning"|"info", "category": str, "message": '
-    'str, "suggestion": str|null, "confidence": float in [0,1]}. If there '
-    "are no issues, return []."
-)
-
-_LEADING_FENCE_RE = re.compile(r"^```(?:json)?\s*\n?", re.IGNORECASE)
-_TRAILING_FENCE_RE = re.compile(r"\n?```\s*$")
-
-
-def _render_diff_blob(diff_files: list[FileDiff], max_hunks_per_file: int = 5) -> str:
-    """Compact textual rendering of parsed diffs for the LLM prompt.
-
-    Truncates to ``max_hunks_per_file`` hunks per file to stay inside the
-    7B model's ~8K context budget. Proper chunking is a later story.
-    """
-    parts: list[str] = []
-    for f in diff_files:
-        parts.append(f"=== {f.filename} ({f.language}) ===")
-        for hunk in f.hunks[:max_hunks_per_file]:
-            parts.append(f"@@ -{hunk.old_start} +{hunk.new_start} @@")
-            for ch in hunk.changes:
-                prefix = {"add": "+", "remove": "-", "context": " "}.get(ch.type, " ")
-                parts.append(f"{prefix}{ch.content}")
-        if len(f.hunks) > max_hunks_per_file:
-            parts.append(f"... ({len(f.hunks) - max_hunks_per_file} more hunks truncated)")
-        parts.append("")
-    return "\n".join(parts)
-
-
-def _strip_code_fences(text: str) -> str:
-    """Strip leading ```json / trailing ``` that Ollama sometimes adds despite JSON mode."""
-    s = text.strip()
-    s = _LEADING_FENCE_RE.sub("", s)
-    s = _TRAILING_FENCE_RE.sub("", s)
-    return s.strip()
-
-
-def _parse_review_response(content: str, agent: str) -> tuple[list[ReviewItem], str | None]:
-    """Parse LLM response into a list of ``ReviewItem``.
-
-    Returns ``(items, error_string)``. On any failure ``items`` is empty and
-    ``error_string`` describes what went wrong — caller writes it to
-    ``metadata`` rather than crashing.
-    """
-    cleaned = _strip_code_fences(content)
-    if not cleaned:
-        return [], "empty_response"
-
-    try:
-        raw = json.loads(cleaned)
-    except json.JSONDecodeError as exc:
-        return [], f"json_decode_error: {exc.msg}"
-
-    # Tolerate common LLM quirks: ChatOllama(format="json") sometimes returns
-    # an object instead of an array. Map the recognised shapes to a list:
-    #   {}                              → []  (LLM's stand-in for "no findings")
-    #   {"findings": [...]}             → [...]
-    #   {"file": ..., "message": ...}   → [{...}]  (a single finding)
-    # Anything else is a true error.
-    if isinstance(raw, dict):
-        if not raw:
-            raw = []
-        elif "findings" in raw and isinstance(raw["findings"], list):
-            raw = raw["findings"]
-        elif "file" in raw or "message" in raw:
-            raw = [raw]
-        else:
-            return [], f"expected_list_got_{type(raw).__name__}"
-
-    if not isinstance(raw, list):
-        return [], f"expected_list_got_{type(raw).__name__}"
-
-    items: list[ReviewItem] = []
-    for entry in raw:
-        if not isinstance(entry, dict):
-            continue
-        entry.setdefault("agent", agent)
-        try:
-            items.append(ReviewItem.model_validate(entry))
-        except ValidationError as exc:
-            log.warning("review_item_validation_failed", entry=entry, error=str(exc))
-            continue
-    return items, None
 
 
 def quality_review_node(state: ReviewState) -> dict:
-    """Send the parsed diff to Ollama and return a quality review.
+    """Run the Quality Agent against ``state["diff_files"]``.
 
-    Writes ``agent_reviews["quality"]``. If the LLM call fails or the response
-    can't be parsed, returns an empty list and records the error in metadata —
-    never propagates an exception.
+    Thin wrapper: the prompt, retry logic, and confidence filtering all live
+    on ``QualityAgent`` / ``BaseAgent``. This node just plumbs state in and
+    out. Future agents (Security/Performance/Architecture) get their own
+    wrapper nodes following this exact shape.
     """
-    diff_files: list[FileDiff] = state.get("diff_files", []) or []
-    pr_url = state.get("pr_url", "<local>")
-
+    diff_files = state.get("diff_files", []) or []
     if not diff_files:
         log.info("quality_review_node_no_diff")
         return {"agent_reviews": {"quality": []}}
 
-    log.info("quality_review_node_start", n_files=len(diff_files), pr_url=pr_url)
-
-    diff_blob = _render_diff_blob(diff_files)
-    user_msg = f"PR: {pr_url}\nFiles changed:\n\n{diff_blob}\n\nReview the changes above. Output JSON only."
-
-    llm = ChatOllama(
-        model=OLLAMA_MODEL,
-        base_url=OLLAMA_HOST,
-        temperature=0.0,
-        format="json",
+    agent = QualityAgent()
+    items, agent_metadata = agent.review(
+        diff_files, pr_url=state.get("pr_url", "")
     )
 
-    metadata: dict[str, Any] = {}
-    try:
-        response = llm.invoke(
-            [
-                SystemMessage(content=_QUALITY_SYSTEM_PROMPT),
-                HumanMessage(content=user_msg),
-            ]
-        )
-        content = response.content if isinstance(response.content, str) else str(response.content)
-    except Exception as exc:
-        log.error("quality_review_node_llm_error", error=str(exc), exc_info=True)
-        return {
-            "agent_reviews": {"quality": []},
-            "metadata": {"quality_review_error": f"llm_call_failed: {exc}"},
-        }
-
-    items, parse_error = _parse_review_response(content, agent="quality")
-    if parse_error:
-        log.warning("quality_review_node_parse_error", error=parse_error, raw=content[:500])
-        metadata["quality_review_error"] = parse_error
-
-    log.info("quality_review_node_done", n_findings=len(items))
     result: dict[str, Any] = {"agent_reviews": {"quality": items}}
-    if metadata:
-        result["metadata"] = metadata
+    if agent_metadata:
+        result["metadata"] = agent_metadata
     return result
 
 

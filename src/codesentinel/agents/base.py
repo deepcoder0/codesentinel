@@ -18,7 +18,6 @@ from __future__ import annotations
 import json
 import re
 import time
-from abc import ABC
 from typing import Any, ClassVar
 
 import structlog
@@ -35,16 +34,19 @@ _LEADING_FENCE_RE = re.compile(r"^```(?:json)?\s*\n?", re.IGNORECASE)
 _TRAILING_FENCE_RE = re.compile(r"\n?```\s*$")
 
 
-class BaseAgent(ABC):
-    """Abstract base for all review agents.
+class BaseAgent:
+    """Base class for all review agents.
 
     Concrete subclasses must set ``name`` and ``default_system_prompt`` as
-    class attributes. They may override ``confidence_threshold``.
+    class attributes. They may override ``confidence_threshold``. The class
+    is not formally `ABC` because there are no methods to mark abstract —
+    the contract is "set these class attrs" — but the constructor raises
+    ``TypeError`` if a subclass forgets them.
     """
 
     name: ClassVar[str] = ""
     default_system_prompt: ClassVar[str] = ""
-    confidence_threshold: ClassVar[float] = 0.6
+    confidence_threshold: float = 0.6
 
     def __init__(
         self,
