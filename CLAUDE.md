@@ -12,7 +12,7 @@ A multi-agent AI code review system. Pipeline: **GitHub PR → parse diff → fa
 
 ## Current Repo State
 
-Sprint 1 in progress. **Implemented:** `models.py`, `config.py`, `hello_graph.py`, `parser.py` (CS-002 — `parse_pr` + raw-diff fallback, ±3 context preserved, binary skip, rename detection, 37 tests). **Empty scaffolds:** `agents/`, `graph/`, `rag/`, `api/`, `mcp/`, `output/` subpackages — only `__init__.py` files. Do not assume a file exists just because it appears in a planned layout — read or `find` first.
+Sprint 1 in progress. **Implemented:** `models.py`, `config.py`, `hello_graph.py`, `parser.py` (CS-002), `graph/state.py` + `graph/nodes.py` + `graph/builder.py` (CS-003 — 3-node review pipeline, ChatOllama-backed quality_review, markdown formatter), `cli.py` (entrypoint for `make review`). **Empty scaffolds:** `agents/`, `rag/`, `api/`, `mcp/`, `output/` subpackages — only `__init__.py` files. Do not assume a file exists just because it appears in a planned layout — read or `find` first.
 
 ## Dev Environment
 
@@ -45,6 +45,7 @@ Single test: `pytest tests/test_models.py::TestReviewItem::test_confidence_bound
 - **All LLM calls go through `langchain_ollama.ChatOllama`.** No direct HTTP to Ollama, no other LLM SDKs (OpenAI/Anthropic). Host and model come from `config.py` (env vars `OLLAMA_HOST`, `OLLAMA_MODEL`, `LLM_TEMPERATURE`), never hardcoded.
 - **Agents will share a `BaseAgent` ABC** in `agents/base.py` (not yet written). Each of the 4 agents has its own focused RAG collection — knowledge sources live under `knowledge/{quality,security,performance,architecture}/` and are ingested into ChromaDB at `data/chroma/`. RAG retrieval returns `List[Document]`; agents inject these via a `{rag_context}` prompt template variable.
 - **Context budget** for the 7B model is ~8K tokens: roughly 2K RAG, 4K diff, 2K prompt+output. Diff chunking will be needed for large PRs.
+- **TypedDict state imports must stay at runtime, not under `TYPE_CHECKING`.** LangGraph's `StateGraph(ReviewState)` and `g.add_node(...)` call `typing.get_type_hints()`, which forces resolution of every name in the TypedDict and in each node's signature. If you move model imports under `TYPE_CHECKING`, graph construction crashes with `NameError`. The `TCH`/`TC001` ruff rule will flag these — suppress with `# noqa: TC001` and a comment explaining why. See `src/codesentinel/graph/state.py` and `nodes.py`.
 
 ## Project Rules (Auto-loaded)
 

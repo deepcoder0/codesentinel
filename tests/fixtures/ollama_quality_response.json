@@ -1,0 +1,22 @@
+[
+  {
+    "file": "src/api/routes.py",
+    "line_start": 11,
+    "line_end": null,
+    "severity": "warning",
+    "category": "naming",
+    "message": "Function `get_user` shadows builtin-like name; consider `fetch_user`.",
+    "suggestion": "Rename to `fetch_user`.",
+    "confidence": 0.7
+  },
+  {
+    "file": "src/api/routes.py",
+    "line_start": 12,
+    "line_end": null,
+    "severity": "info",
+    "category": "structure",
+    "message": "Function has no docstring.",
+    "suggestion": "Add a one-line docstring.",
+    "confidence": 0.6
+  }
+]
