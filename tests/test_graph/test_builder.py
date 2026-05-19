@@ -11,11 +11,12 @@ FIXTURE_DIR = Path(__file__).parent.parent / "fixtures"
 
 
 def _patch_ollama(content: str):
+    """Patch ChatOllama where BaseAgent imports it from (CS-004 moved the LLM call there)."""
     fake_resp = MagicMock()
     fake_resp.content = content
     fake_llm = MagicMock()
     fake_llm.invoke.return_value = fake_resp
-    return patch("codesentinel.graph.nodes.ChatOllama", return_value=fake_llm)
+    return patch("codesentinel.agents.base.ChatOllama", return_value=fake_llm)
 
 
 class TestEndToEnd:
@@ -49,7 +50,7 @@ class TestEndToEnd:
 
         # Graph still completes; markdown reports no findings; metadata has the error.
         assert "No issues found" in result["final_output"]
-        assert "quality_review_error" in result["metadata"]
+        assert "quality_error" in result["metadata"]
 
     def test_invoke_with_missing_inputs_does_not_crash(self) -> None:
         with _patch_ollama("[]"):
