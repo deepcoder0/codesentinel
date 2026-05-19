@@ -2245,7 +2245,7 @@ At Ollama (local): $0.00  (just electricity)
 <section class="section" id="sprints">
   <div class="section-label">14 — Sprint Board</div>
   <div class="section-title">JIRA-Style Stories & Sprint Plan</div>
-  <p class="section-desc">5 hours/day = 1 story point. 6 sprints over 6 weeks. Each story has acceptance criteria, tags, and effort estimates. Sprint 3 (7 SP) and Sprint 4 (9 SP) are the heaviest due to A2A, tool-use, and HITL — budget extra time those weeks. This is your execution roadmap.</p>
+  <p class="section-desc">5 hours/day = 1 story point. 6 sprints over 6 weeks. Each story has acceptance criteria, tags, and effort estimates. Sprint 3 (7 SP) and Sprint 4 (11 SP) are the heaviest due to A2A, tool-use, HITL, and the web UI — budget extra time those weeks. This is your execution roadmap.</p>
 
   <div class="sprint-tabs">
     <div class="sprint-tab active" onclick="showSprint(0)">Sprint 1</div>
@@ -3389,11 +3389,11 @@ At Ollama (local): $0.00  (just electricity)
   <!-- SPRINT 4 -->
   <div class="sprint-content" id="sprint-3">
     <div class="sprint-header">
-      <div class="sprint-title">Sprint 4 — MCP, Observability, Tool-Use & Human-in-the-Loop</div>
+      <div class="sprint-title">Sprint 4 — MCP, Observability, Tool-Use, HITL & Web UI</div>
       <div class="sprint-meta">
-        <div class="sprint-meta-item">Points: <span>9 SP</span></div>
-        <div class="sprint-meta-item">Hours: <span>~45h</span></div>
-        <div class="sprint-meta-item">Goal: <span>MCP + agent tools + tracing + HITL</span></div>
+        <div class="sprint-meta-item">Points: <span>11 SP</span></div>
+        <div class="sprint-meta-item">Hours: <span>~55h</span></div>
+        <div class="sprint-meta-item">Goal: <span>MCP + agent tools + tracing + HITL + demo UI</span></div>
       </div>
     </div>
     <div class="story-list">
@@ -3871,6 +3871,89 @@ At Ollama (local): $0.00  (just electricity)
                   <li><strong>Context window budget after tool-use</strong> — Diff (4K) + RAG (2K) + tool results (1K) + prompt (1K) = 8K. Stay within the model's effective attention range</li>
                   <li><strong>Only for Python initially</strong> — AST extraction works for Python. JS/TS would need a different parser. Start with Python files only, add others later</li>
                   <li><strong>This is your interview differentiator</strong> — "My agents dynamically request additional context using LangGraph tool-use with a two-pass summarize-then-fetch approach" is a sentence that gets senior-level attention</li>
+                </ul>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="story">
+        <div class="story-top">
+          <span class="story-id">CS-019B</span>
+          <span class="story-title">Minimal web UI — paste PR URL, preview diff, view review</span>
+          <span class="story-points sp-2">2 SP</span>
+        </div>
+        <div class="story-desc">Build a single-page web UI served by the existing FastAPI app. User pastes a GitHub PR URL, clicks Preview to see the parsed diff (file list + expandable hunks), clicks Submit to run the agents, watches a loading spinner, and reads the agent findings as styled markdown. No build step — Jinja2 templates plus vanilla JS plus marked.js from a CDN. This is the demo surface CS-023 calls for.</div>
+        <div class="story-acceptance">
+          <div class="story-acceptance-title">Acceptance Criteria</div>
+          <ul class="story-ac-list">
+            <li>GET / serves a Jinja2 review page with PR URL input, Preview button, and Submit button</li>
+            <li>GET /api/preview?pr_url=… returns parsed diff JSON (file list + hunks, no LLM call)</li>
+            <li>Preview populates a "Changed Files" section with status icons (added / modified / removed / renamed) and click-to-expand hunks</li>
+            <li>Submit POSTs to /api/review, shows a loading spinner, then renders the markdown response with severity badges (🔴/🟡/🔵) grouped by agent</li>
+            <li>Inline error messages for: invalid URL format, GitHub 404 / 403, Ollama unreachable, review timeout — never a stack trace</li>
+            <li>Works in current Chrome and Safari with no npm install, no build pipeline</li>
+          </ul>
+        </div>
+        <div class="story-tags">
+          <span class="story-tag">ui</span>
+          <span class="story-tag">fastapi</span>
+          <span class="story-tag">jinja</span>
+          <span class="story-tag">demo</span>
+        </div>
+        <div class="deep-dive">
+          <div class="deep-dive-toggle" onclick="toggleDive(this)">
+            <span class="arrow">▶</span>
+            <span class="label">Deep Dive — Why, How & Subtasks</span>
+          </div>
+          <div class="deep-dive-content">
+            <div class="dive-grid">
+              <div class="dive-card dive-why">
+                <div class="dive-card-header">
+                  <div class="dive-card-icon" style="background: var(--accent-green-glow); color: var(--accent-green);">?</div>
+                  <div class="dive-card-title">Why This Matters</div>
+                </div>
+                <p>The demo video (CS-023) and the README screenshot are how this project gets evaluated by people who won't read code. A curl-the-API demo doesn't sell the multi-agent story — but a UI showing "paste a URL → here's the diff → here come the findings, agent by agent" does. This is the lightest UI that achieves that, with no JS build pipeline added to the project.</p>
+              </div>
+              <div class="dive-card dive-how">
+                <div class="dive-card-header">
+                  <div class="dive-card-icon" style="background: var(--accent-blue-dim); color: var(--accent-blue);">→</div>
+                  <div class="dive-card-title">How — Step by Step</div>
+                </div>
+                <ul>
+                  <li><strong>Add deps</strong> — <code>jinja2</code> and (optionally) <code>python-multipart</code> for form handling. Update <code>pyproject.toml</code></li>
+                  <li><strong>Templates + static dirs</strong> — Create <code>src/codesentinel/api/templates/review.html</code> and <code>src/codesentinel/api/static/{app.js,style.css}</code>. Mount with <code>app.mount("/static", StaticFiles(directory=…))</code></li>
+                  <li><strong>GET /</strong> — Returns <code>templates.TemplateResponse("review.html", {"request": request})</code>. Single page, no auth, no routing</li>
+                  <li><strong>GET /api/preview</strong> — Calls <code>parse_pr(pr_url=…)</code> from CS-002 and returns <code>[d.model_dump() for d in diffs]</code>. Cheap, ~200ms</li>
+                  <li><strong>UI JS</strong> — On Preview click, <code>fetch('/api/preview?pr_url=…')</code> then render each file as a collapsible block. On Submit click, <code>fetch('/api/review', {method:'POST', body:JSON.stringify({pr_url})})</code>, show spinner via CSS class toggle, then <code>marked.parse(result.final_output)</code> into the results div</li>
+                  <li><strong>Sanitize markdown</strong> — Use marked.js with <code>{ sanitize: true }</code> or pipe through DOMPurify. The review markdown comes from an LLM; never trust it</li>
+                  <li><strong>Live test</strong> — Run <code>make serve</code>, open localhost:8000, paste a small public PR URL, verify preview shows the right files and submit produces findings within 60s</li>
+                </ul>
+              </div>
+              <div class="dive-card dive-concepts">
+                <div class="dive-card-header">
+                  <div class="dive-card-icon" style="background: var(--accent-purple-dim); color: var(--accent-purple);">◆</div>
+                  <div class="dive-card-title">Concepts You'll Learn</div>
+                </div>
+                <ul>
+                  <li><strong>Server-rendered HTML in Python</strong> — Jinja2 + FastAPI gives you working pages in 30 lines. No build step, no node_modules, no npm versions to fight. The right default for an internal tool</li>
+                  <li><strong>fetch() and async UI</strong> — How vanilla JS does HTTP requests, why you need a spinner, how to handle timeouts and errors without a framework</li>
+                  <li><strong>CDN dependencies</strong> — Loading <code>marked.js</code> from unpkg / jsdelivr instead of npm-installing it. Trade-off: simplicity vs supply-chain risk</li>
+                  <li><strong>Output sanitization</strong> — LLM output rendered as HTML is an XSS sink. Always sanitize. The Security Agent will catch you if you forget</li>
+                </ul>
+              </div>
+              <div class="dive-card dive-gotchas">
+                <div class="dive-card-header">
+                  <div class="dive-card-icon" style="background: var(--accent-orange-dim); color: var(--accent-orange);">!</div>
+                  <div class="dive-card-title">Gotchas & Tips</div>
+                </div>
+                <ul>
+                  <li><strong>Review takes 10–60s</strong> — Default fetch has no timeout but proxies/CDNs do. If you deploy to Railway/Render, set <code>AbortController</code> with a 120s timeout and tell the user via the spinner caption ("Running 4 agents — this may take a minute")</li>
+                  <li><strong>innerHTML is XSS</strong> — <code>resultsDiv.innerHTML = markdown</code> is the exact pattern your own Security Agent will flag. Use marked.js sanitize mode and never bypass it for "convenience"</li>
+                  <li><strong>CORS</strong> — Not a problem when the UI is served from the same FastAPI app (same origin). If you ever split frontend/backend, the CORS middleware from CS-012 starts mattering</li>
+                  <li><strong>Don't add a JS framework</strong> — React/Vue would 10x the surface area. If you find yourself wanting one, scope down the UI instead. The whole UI should fit in ~150 lines of JS</li>
+                  <li><strong>PR URL validation</strong> — Use <code>&lt;input type="url" pattern="https://github.com/.+/pull/\d+"&gt;</code> so the browser blocks obviously bad input before you fire a request</li>
                 </ul>
               </div>
             </div>
